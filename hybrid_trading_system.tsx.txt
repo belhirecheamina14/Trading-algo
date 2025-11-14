@@ -1,0 +1,538 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { TrendingUp, TrendingDown, Activity, DollarSign, AlertTriangle, Target, Zap, Brain, Shield } from 'lucide-react';
+
+const HybridTradingSystem = () => {
+  const [strategies, setStrategies] = useState([
+    { 
+      id: 1, 
+      name: 'Mean Reversion', 
+      type: 'unified',
+      mastery: 0, 
+      active: false, 
+      pnl: 0, 
+      sharpe: 0,
+      trades: 0,
+      regime: 'ranging',
+      color: 'bg-blue-500',
+      confidence: 0
+    },
+    { 
+      id: 2, 
+      name: 'Momentum', 
+      type: 'unified',
+      mastery: 0, 
+      active: false, 
+      pnl: 0, 
+      sharpe: 0,
+      trades: 0,
+      regime: 'trending',
+      color: 'bg-green-500',
+      confidence: 0
+    },
+    { 
+      id: 3, 
+      name: 'Statistical Arbitrage', 
+      type: 'unified',
+      mastery: 0, 
+      active: false, 
+      pnl: 0, 
+      sharpe: 0,
+      trades: 0,
+      regime: 'neutral',
+      color: 'bg-purple-500',
+      confidence: 0
+    },
+    { 
+      id: 4, 
+      name: 'Volatility Capture', 
+      type: 'unified',
+      mastery: 0, 
+      active: false, 
+      pnl: 0, 
+      sharpe: 0,
+      trades: 0,
+      regime: 'volatile',
+      color: 'bg-orange-500',
+      confidence: 0
+    }
+  ]);
+
+  const [orchestrator, setOrchestrator] = useState({
+    regimeDetection: 0,
+    riskManagement: 0,
+    capitalAllocation: 0,
+    correlation: 0
+  });
+
+  const [marketRegime, setMarketRegime] = useState('neutral');
+  const [totalPnL, setTotalPnL] = useState(0);
+  const [portfolioSharpe, setPortfolioSharpe] = useState(0);
+  const [isTraining, setIsTraining] = useState(false);
+  const [isLive, setIsLive] = useState(false);
+  const [tick, setTick] = useState(0);
+  const [events, setEvents] = useState([]);
+
+  const regimes = {
+    trending: { desc: 'Strong Directional', optimal: ['Momentum'], volatility: 0.15 },
+    ranging: { desc: 'Mean Reverting', optimal: ['Mean Reversion', 'Statistical Arbitrage'], volatility: 0.08 },
+    volatile: { desc: 'High Volatility', optimal: ['Volatility Capture'], volatility: 0.35 },
+    neutral: { desc: 'Mixed Signals', optimal: ['Statistical Arbitrage'], volatility: 0.12 }
+  };
+
+  const trainStrategy = async (strategyId) => {
+    setIsTraining(true);
+    
+    // Train individual strategy to mastery
+    for (let i = 0; i <= 100; i += 10) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setStrategies(prev => prev.map(s => 
+        s.id === strategyId ? { ...s, mastery: i, confidence: i * 0.9 } : s
+      ));
+    }
+
+    setEvents(prev => [...prev, {
+      time: Date.now(),
+      type: 'success',
+      message: `Strategy ${strategyId} achieved mastery`
+    }]);
+
+    setIsTraining(false);
+  };
+
+  const trainOrchestrator = async () => {
+    setIsTraining(true);
+
+    // Train orchestrator capabilities
+    const capabilities = ['regimeDetection', 'riskManagement', 'capitalAllocation', 'correlation'];
+    
+    for (const cap of capabilities) {
+      for (let i = 0; i <= 100; i += 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        setOrchestrator(prev => ({ ...prev, [cap]: i }));
+      }
+      
+      setEvents(prev => [...prev, {
+        time: Date.now(),
+        type: 'info',
+        message: `Orchestrator learned ${cap.replace(/([A-Z])/g, ' $1').toLowerCase()}`
+      }]);
+    }
+
+    setIsTraining(false);
+  };
+
+  const toggleStrategy = (id) => {
+    if (isLive) {
+      alert('Cannot modify strategies while system is live');
+      return;
+    }
+    setStrategies(prev => prev.map(s => 
+      s.id === id ? { ...s, active: !s.active } : s
+    ));
+  };
+
+  const goLive = () => {
+    const activeStrats = strategies.filter(s => s.active);
+    const untrained = activeStrats.filter(s => s.mastery < 100);
+    
+    if (untrained.length > 0) {
+      alert('All active strategies must reach 100% mastery before going live');
+      return;
+    }
+
+    const orchestratorReady = Object.values(orchestrator).every(v => v >= 100);
+    if (!orchestratorReady) {
+      alert('Orchestrator must be fully trained before going live');
+      return;
+    }
+
+    if (activeStrats.length === 0) {
+      alert('Activate at least one strategy');
+      return;
+    }
+
+    setIsLive(true);
+    setEvents(prev => [...prev, {
+      time: Date.now(),
+      type: 'success',
+      message: '🚀 System is LIVE - Multi-strategy execution started'
+    }]);
+  };
+
+  const stopLive = () => {
+    setIsLive(false);
+    setEvents(prev => [...prev, {
+      time: Date.now(),
+      type: 'warning',
+      message: '⏸️ System stopped - Positions closing'
+    }]);
+  };
+
+  // Live trading simulation
+  useEffect(() => {
+    if (!isLive) return;
+
+    const interval = setInterval(() => {
+      setTick(t => t + 1);
+
+      // Randomly change market regime
+      if (Math.random() < 0.1) {
+        const regimeKeys = Object.keys(regimes);
+        const newRegime = regimeKeys[Math.floor(Math.random() * regimeKeys.length)];
+        setMarketRegime(newRegime);
+        
+        setEvents(prev => [...prev, {
+          time: Date.now(),
+          type: 'warning',
+          message: `⚠️ Regime shift detected: ${regimes[newRegime].desc}`
+        }]);
+      }
+
+      // Update strategies based on regime fit
+      setStrategies(prev => prev.map(strategy => {
+        if (!strategy.active) return strategy;
+
+        const isOptimal = regimes[marketRegime].optimal.includes(strategy.name);
+        const regimeVolatility = regimes[marketRegime].volatility;
+        
+        // Strategy performance depends on regime fit
+        const baseReturn = (Math.random() - 0.5) * 2;
+        const regimeFactor = isOptimal ? 2.0 : 0.5;
+        const returnPct = baseReturn * regimeFactor * regimeVolatility;
+        
+        const pnlChange = returnPct * 1000; // Base capital allocation
+        const newPnL = strategy.pnl + pnlChange;
+        const newTrades = strategy.trades + 1;
+        
+        // Calculate rolling Sharpe (simplified)
+        const avgReturn = newPnL / Math.max(1, newTrades);
+        const sharpe = avgReturn / (regimeVolatility * 100);
+
+        return {
+          ...strategy,
+          pnl: newPnL,
+          trades: newTrades,
+          sharpe: sharpe,
+          confidence: isOptimal ? 95 : 60
+        };
+      }));
+
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isLive, marketRegime]);
+
+  // Update portfolio metrics
+  useEffect(() => {
+    const activeStrats = strategies.filter(s => s.active);
+    const total = activeStrats.reduce((sum, s) => sum + s.pnl, 0);
+    setTotalPnL(total);
+
+    if (activeStrats.length > 0) {
+      const avgSharpe = activeStrats.reduce((sum, s) => sum + s.sharpe, 0) / activeStrats.length;
+      
+      // Portfolio Sharpe benefits from diversification
+      const diversificationBonus = Math.sqrt(activeStrats.length) * 0.2;
+      const correlationPenalty = (100 - orchestrator.correlation) / 200;
+      
+      setPortfolioSharpe(avgSharpe * (1 + diversificationBonus) * (1 + correlationPenalty));
+    }
+  }, [strategies, orchestrator.correlation]);
+
+  const reset = () => {
+    setStrategies(prev => prev.map(s => ({ 
+      ...s, 
+      mastery: 0, 
+      active: false, 
+      pnl: 0, 
+      sharpe: 0, 
+      trades: 0,
+      confidence: 0
+    })));
+    setOrchestrator({ regimeDetection: 0, riskManagement: 0, capitalAllocation: 0, correlation: 0 });
+    setTotalPnL(0);
+    setPortfolioSharpe(0);
+    setIsLive(false);
+    setTick(0);
+    setEvents([]);
+    setMarketRegime('neutral');
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Activity className="w-12 h-12 text-indigo-400" />
+            <h1 className="text-5xl font-bold text-white">Hybrid Multi-Strategy System</h1>
+          </div>
+          <p className="text-indigo-200 text-lg">
+            Unified Strategies + Emergent Orchestration
+          </p>
+        </div>
+
+        {/* Portfolio Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-slate-800/50 backdrop-blur border border-indigo-500/30 rounded-xl p-6">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign className="w-5 h-5 text-green-400" />
+              <span className="text-gray-300 font-semibold">Total P&L</span>
+            </div>
+            <div className={`text-3xl font-bold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              ${totalPnL.toFixed(2)}
+            </div>
+          </div>
+
+          <div className="bg-slate-800/50 backdrop-blur border border-indigo-500/30 rounded-xl p-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="w-5 h-5 text-blue-400" />
+              <span className="text-gray-300 font-semibold">Sharpe Ratio</span>
+            </div>
+            <div className="text-3xl font-bold text-blue-400">
+              {portfolioSharpe.toFixed(2)}
+            </div>
+          </div>
+
+          <div className="bg-slate-800/50 backdrop-blur border border-indigo-500/30 rounded-xl p-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Activity className="w-5 h-5 text-purple-400" />
+              <span className="text-gray-300 font-semibold">Market Regime</span>
+            </div>
+            <div className="text-lg font-bold text-purple-400">
+              {regimes[marketRegime].desc}
+            </div>
+          </div>
+
+          <div className="bg-slate-800/50 backdrop-blur border border-indigo-500/30 rounded-xl p-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="w-5 h-5 text-yellow-400" />
+              <span className="text-gray-300 font-semibold">Status</span>
+            </div>
+            <div className={`text-lg font-bold ${isLive ? 'text-green-400' : 'text-gray-400'}`}>
+              {isLive ? '🟢 LIVE' : '⚪ IDLE'}
+            </div>
+          </div>
+        </div>
+
+        {/* Strategies (Unified Experts) */}
+        <div className="bg-slate-800/50 backdrop-blur border border-indigo-500/30 rounded-xl p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Brain className="w-6 h-6 text-indigo-400" />
+              Individual Strategies (Unified Experts)
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {strategies.map(strategy => (
+              <div 
+                key={strategy.id}
+                className={`border-2 rounded-xl p-5 transition-all ${
+                  strategy.active 
+                    ? `${strategy.color} border-white shadow-lg` 
+                    : 'bg-slate-700/50 border-slate-600'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="font-bold text-white text-lg">{strategy.name}</div>
+                    <div className="text-xs text-gray-300">
+                      Optimal: {strategy.regime} markets
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleStrategy(strategy.id)}
+                    disabled={isLive}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      strategy.active
+                        ? 'bg-white text-slate-900'
+                        : 'bg-slate-600 text-white hover:bg-slate-500'
+                    }`}
+                  >
+                    {strategy.active ? 'Active' : 'Inactive'}
+                  </button>
+                </div>
+
+                <div className="space-y-2 mb-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-300">Mastery</span>
+                    <span className="text-white font-mono">{strategy.mastery}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all"
+                      style={{ width: `${strategy.mastery}%` }}
+                    />
+                  </div>
+                </div>
+
+                {strategy.active && (
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <div className="text-gray-400 text-xs">P&L</div>
+                      <div className={`font-bold ${strategy.pnl >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                        ${strategy.pnl.toFixed(0)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-400 text-xs">Sharpe</div>
+                      <div className="font-bold text-blue-300">{strategy.sharpe.toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-400 text-xs">Trades</div>
+                      <div className="font-bold text-purple-300">{strategy.trades}</div>
+                    </div>
+                  </div>
+                )}
+
+                {strategy.mastery < 100 && !isLive && (
+                  <button
+                    onClick={() => trainStrategy(strategy.id)}
+                    disabled={isTraining}
+                    className="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 text-white py-2 rounded-lg text-sm font-semibold"
+                  >
+                    Train to Mastery
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Orchestrator (Emergent Intelligence) */}
+        <div className="bg-slate-800/50 backdrop-blur border border-purple-500/30 rounded-xl p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Shield className="w-6 h-6 text-purple-400" />
+              Orchestrator (Emergent Intelligence)
+            </h2>
+            {Object.values(orchestrator).every(v => v < 100) && !isTraining && (
+              <button
+                onClick={trainOrchestrator}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-semibold"
+              >
+                Train Orchestrator
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Object.entries(orchestrator).map(([key, value]) => (
+              <div key={key}>
+                <div className="flex justify-between mb-2">
+                  <span className="text-white capitalize">
+                    {key.replace(/([A-Z])/g, ' $1')}
+                  </span>
+                  <span className="text-purple-300 font-mono">{value}%</span>
+                </div>
+                <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-purple-600 to-pink-500 transition-all"
+                    style={{ width: `${value}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg">
+            <div className="text-sm text-purple-200">
+              <strong>Role:</strong> Detects market regimes, allocates capital dynamically, manages portfolio risk, 
+              and coordinates strategies to maximize diversification while minimizing correlation during drawdowns.
+            </div>
+          </div>
+        </div>
+
+        {/* Event Log */}
+        {events.length > 0 && (
+          <div className="bg-slate-800/50 backdrop-blur border border-indigo-500/30 rounded-xl p-6 mb-8 max-h-64 overflow-y-auto">
+            <h3 className="text-xl font-bold text-white mb-3">System Events</h3>
+            <div className="space-y-2">
+              {events.slice(-10).reverse().map((event, idx) => (
+                <div 
+                  key={idx}
+                  className={`text-sm p-2 rounded border-l-4 ${
+                    event.type === 'success' ? 'bg-green-900/20 border-green-500 text-green-200' :
+                    event.type === 'warning' ? 'bg-yellow-900/20 border-yellow-500 text-yellow-200' :
+                    'bg-blue-900/20 border-blue-500 text-blue-200'
+                  }`}
+                >
+                  {event.message}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Controls */}
+        <div className="flex gap-4">
+          <button
+            onClick={goLive}
+            disabled={isLive || isTraining}
+            className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-slate-600 disabled:to-slate-700 text-white font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3"
+          >
+            <TrendingUp className="w-5 h-5" />
+            Go Live
+          </button>
+
+          <button
+            onClick={stopLive}
+            disabled={!isLive}
+            className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-slate-600 disabled:to-slate-700 text-white font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3"
+          >
+            <AlertTriangle className="w-5 h-5" />
+            Stop Trading
+          </button>
+
+          <button
+            onClick={reset}
+            disabled={isLive}
+            className="bg-slate-600 hover:bg-slate-700 disabled:bg-slate-500 text-white font-bold py-4 px-6 rounded-xl transition-all"
+          >
+            Reset
+          </button>
+        </div>
+
+        {/* Architecture Explanation */}
+        <div className="mt-12 bg-slate-800/20 backdrop-blur border border-indigo-500/20 rounded-xl p-8">
+          <h3 className="text-2xl font-bold text-white mb-4">Hybrid Architecture: The Right Pattern</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-bold text-indigo-400 mb-3">🎯 Unified Layer (Strategies)</h4>
+              <ul className="space-y-2 text-sm text-gray-300">
+                <li>• Each strategy is a unified expert in its domain</li>
+                <li>• Mean reversion knows its patterns deeply</li>
+                <li>• Momentum has mastered trend following</li>
+                <li>• No strategy needs to coordinate internally</li>
+                <li>• Single model per strategy = fast execution</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-bold text-purple-400 mb-3">🌐 Emergent Layer (Orchestrator)</h4>
+              <ul className="space-y-2 text-sm text-gray-300">
+                <li>• Coordinates multiple strategy "agents"</li>
+                <li>• Detects regime shifts strategies can't see alone</li>
+                <li>• Manages correlations dynamically</li>
+                <li>• Allocates capital based on regime fit</li>
+                <li>• Portfolio-level intelligence emerges</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-lg">
+            <p className="text-indigo-200 text-sm">
+              <strong>Why This Works:</strong> Each strategy operates in a stable sub-domain (mean reversion IS stable). 
+              But the META-problem (which strategies to run when) is unstable and requires emergent intelligence. 
+              This is the pattern: <strong>Unified experts + Emergent coordination = Optimal multi-strategy system</strong>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default HybridTradingSystem;
