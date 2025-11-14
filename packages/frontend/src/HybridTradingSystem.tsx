@@ -131,42 +131,58 @@ const HybridTradingSystem = () => {
     ));
   };
 
-  const goLive = () => {
-    const activeStrats = strategies.filter(s => s.active);
-    const untrained = activeStrats.filter(s => s.mastery < 100);
-    
-    if (untrained.length > 0) {
-      alert('All active strategies must reach 100% mastery before going live');
-      return;
+  const goLive = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/toggle-live', {
+        method: 'POST',
+      });
+      const data = await response.json();
+      setIsLive(data.isLive);
+      setEvents((prev) => [
+        ...prev,
+        {
+          time: Date.now(),
+          type: 'success',
+          message: '🚀 System is LIVE - Multi-strategy execution started',
+        },
+      ]);
+    } catch (error) {
+      console.error('Error going live:', error);
     }
-
-    const orchestratorReady = Object.values(orchestrator).every(v => v >= 100);
-    if (!orchestratorReady) {
-      alert('Orchestrator must be fully trained before going live');
-      return;
-    }
-
-    if (activeStrats.length === 0) {
-      alert('Activate at least one strategy');
-      return;
-    }
-
-    setIsLive(true);
-    setEvents(prev => [...prev, {
-      time: Date.now(),
-      type: 'success',
-      message: '🚀 System is LIVE - Multi-strategy execution started'
-    }]);
   };
 
-  const stopLive = () => {
-    setIsLive(false);
-    setEvents(prev => [...prev, {
-      time: Date.now(),
-      type: 'warning',
-      message: '⏸️ System stopped - Positions closing'
-    }]);
+  const stopLive = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/toggle-live', {
+        method: 'POST',
+      });
+      const data = await response.json();
+      setIsLive(data.isLive);
+      setEvents((prev) => [
+        ...prev,
+        {
+          time: Date.now(),
+          type: 'warning',
+          message: '⏸️ System stopped - Positions closing',
+        },
+      ]);
+    } catch (error) {
+      console.error('Error stopping live:', error);
+    }
   };
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/status');
+        const data = await response.json();
+        setIsLive(data.isLive);
+      } catch (error) {
+        console.error('Error fetching status:', error);
+      }
+    };
+    fetchStatus();
+  }, []);
 
   // Live trading simulation
   useEffect(() => {
