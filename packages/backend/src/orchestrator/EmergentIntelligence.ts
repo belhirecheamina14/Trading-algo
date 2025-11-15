@@ -9,7 +9,9 @@ export class EmergentIntelligence {
     // In a real-world scenario, this method would use a sophisticated
     // model to detect the market regime. For this example, we'll use
     // a simplified logic.
-    if (marketData.volatility > 0.3) {
+    if (marketData.high > 105) { // Threshold for liquidity sweep
+      return 'sweeping';
+    } else if (marketData.volatility > 0.3) {
       return 'volatile';
     } else if (marketData.trendStrength > 0.7) {
       return 'trending';
@@ -24,14 +26,16 @@ export class EmergentIntelligence {
     // For this example, we'll use a simplified logic that favors
     // the strategy that is most likely to perform well in the current
     // regime.
-    if (regime === 'trending' && signals.mom) {
+    if (regime === 'sweeping' && signals.ls) {
+      return { ls: 1 };
+    } else if (regime === 'trending' && signals.mom) {
       return { mom: 1 };
     } else if (regime === 'ranging' && signals.mr) {
       return { mr: 1 };
     } else if (regime === 'volatile' && signals.arb) {
       return { arb: 1 };
     } else {
-      return { mom: 0.33, mr: 0.33, arb: 0.33 };
+      return { mom: 0.25, mr: 0.25, arb: 0.25, ls: 0.25 };
     }
   }
 
